@@ -2,6 +2,7 @@ import { OpenDataClient, PackageResource } from "@/lib/OpenDataClient";
 import openDataCatalog from "./openDataCatalog.json";
 import { createOpenDataCsvParser } from "@/lib/OpenDataCsvHelpers";
 import { toSlug } from "@/lib/TextUtils";
+import { EtlDatabase } from "@/lib/EtlDatabase";
 
 function isFullCsvResource(resource: PackageResource) {
   return (
@@ -27,7 +28,7 @@ function toContactName(firstName: string, lastName: string) {
   return contactName;
 }
 
-async function downloadAndPopulateRawContacts() {
+async function downloadAndPopulateRawContacts(db: EtlDatabase) {
   const openDataClient = new OpenDataClient();
   const contactPackage = await openDataClient.showPackage(
     openDataCatalog.contactInformation,
@@ -50,14 +51,11 @@ async function downloadAndPopulateRawContacts() {
         contactName: toContactName(firstName, lastName),
         contactSlug: toSlug(toContactName(firstName, lastName)),
       }));
-    for await (const row of rowStream) {
-      // Todo: Pass to db
-      console.log(row);
-    }
+    await db.bulkInsertRawContacts(rowStream);
   }
 }
 
-async function downloadAndPopulateRawVotes() {
+async function downloadAndPopulateRawVotes(db: EtlDatabase) {
   const openDataClient = new OpenDataClient();
   const contactPackage = await openDataClient.showPackage(
     openDataCatalog.votingRecords,
@@ -85,10 +83,7 @@ async function downloadAndPopulateRawVotes() {
       committeeName: committee,
       committeeSlug: toSlug(committee),
     }));
-  for await (const row of rowStream) {
-    // Todo: Pass to db
-    console.log(row);
-  }
+  await db.bulkInsertRawVotes(rowStream);
 }
 
 const RawContactColumns = [
@@ -129,9 +124,19 @@ const RawVoteColumns = [
 
 async function main() {
   console.log("Hello from DBSetup");
-  console.log("Grabbing contacts");
-  await downloadAndPopulateRawContacts();
-  console.log("Grabbing votes");
-  await downloadAndPopulateRawVotes();
+  const db = new EtlDatabase();
+  try {
+    console.log("Setting up raw contacts");
+    await db.createRawContactTable();
+    await downloadAndPopulateRawContacts(db);
+
+    console.log("Setting up raw votes");
+    await db.createRawVoteTable();
+    await downloadAndPopulateRawVotes(db);
+  } finally {
+    await db.release();
+  }
+
+  return "Finished";
 }
 main().then(console.log).catch(console.error);
