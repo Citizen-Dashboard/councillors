@@ -76,12 +76,14 @@ async function downloadAndPopulateRawVotes() {
   const parser = createOpenDataCsvParser(RawVoteColumns);
   const rowStream = requestStream
     .pipe(parser)
-    .map(({ firstName, lastName, id, ...row }) => ({
+    .map(({ firstName, lastName, id, committee, ...row }) => ({
       ...row,
       term: mostRecentResource.term,
       inputRowNumber: id,
       contactName: toContactName(firstName, lastName),
       contactSlug: toSlug(toContactName(firstName, lastName)),
+      committeeName: committee,
+      committeeSlug: toSlug(committee),
     }));
   for await (const row of rowStream) {
     // Todo: Pass to db
