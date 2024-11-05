@@ -151,6 +151,127 @@ export class EtlDatabase {
       FROM json_data
     `;
   }
+
+  public async createMatViews() {
+    await this.db.execute`
+      DROP MATERIALIZED VIEW IF EXISTS "Contacts";
+    `;
+    await this.db.execute`
+      CREATE MATERIALIZED VIEW "Contacts" AS
+      SELECT
+        DISTINCT ON ("term", "contactSlug")
+        "contactName",
+        "contactSlug",
+        "photoUrl",
+        "email",
+        "phone"
+      FROM "RawContacts"
+      ORDER BY "term" desc
+    `;
+    await this.db.execute`
+      DROP MATERIALIZED VIEW IF EXISTS "Councillors";
+    `;
+    await this.db.execute`
+      CREATE MATERIALIZED VIEW "Councillors" AS
+      SELECT
+        DISTINCT ON ("term", "wardSlug")
+        "contactSlug",
+        "wardSlug",
+        "term"
+      FROM "RawContacts"
+      WHERE "primaryRole" = 'Councillor'
+        AND "term" = (
+          SELECT max("term") FROM "RawContacts"
+        )
+      ORDER BY "term" desc
+    `;
+    await this.db.execute`
+      DROP MATERIALIZED VIEW IF EXISTS "Wards";
+    `;
+    await this.db.execute`
+      CREATE MATERIALIZED VIEW "Wards" AS
+      SELECT DISTINCT
+        "wardSlug",
+        "wardName",
+        "wardId"
+      FROM "RawContacts"
+      WHERE "wardId" IS NOT NULL
+    `;
+    await this.db.execute`
+      DROP MATERIALIZED VIEW IF EXISTS "Committees";
+    `;
+    await this.db.execute`
+      CREATE MATERIALIZED VIEW "Committees" AS
+      SELECT DISTINCT
+        "committeeSlug",
+        "committeeName"
+      FROM "RawVotes"
+    `;
+    await this.db.execute`
+      DROP MATERIALIZED VIEW IF EXISTS "AgendaItems";
+    `;
+    await this.db.execute`
+      CREATE MATERIALIZED VIEW "AgendaItems" AS
+      SELECT DISTINCT
+        "agendaItemNumber",
+        "agendaItemTitle"
+      FROM "RawVotes"
+    `;
+    await this.db.execute`
+      DROP MATERIALIZED VIEW IF EXISTS "ProblemAgendaItems" CASCADE;
+    `;
+    await this.db.execute`
+      CREATE MATERIALIZED VIEW "ProblemAgendaItems" AS
+      SELECT
+        "agendaItemNumber",
+        COUNT(DISTINCT "result")
+      FROM "RawVotes"
+      GROUP BY (
+        "agendaItemNumber",
+        "motionType",
+        "voteDescription",
+        "dateTime"
+      )
+      HAVING COUNT(DISTINCT "result") > 1
+    `;
+    await this.db.execute`
+      DROP MATERIALIZED VIEW IF EXISTS "Motions";
+    `;
+    await this.db.execute`
+      CREATE MATERIALIZED VIEW "Motions" AS
+      SELECT DISTINCT
+        "agendaItemNumber",
+        "motionType",
+        "voteDescription",
+        "dateTime",
+        "committeeSlug",
+        "result"
+      FROM "RawVotes"
+      WHERE "agendaItemNumber" NOT IN (
+        SELECT "agendaItemNumber"
+        FROM "ProblemAgendaItems"
+      )
+    `;
+    await this.db.execute`
+      DROP MATERIALIZED VIEW IF EXISTS "Votes";
+    `;
+    await this.db.execute`
+      CREATE MATERIALIZED VIEW "Votes" AS
+      SELECT DISTINCT
+       "agendaItemNumber",
+        "motionType",
+        "voteDescription",
+        "dateTime",
+        "committeeSlug",
+        "contactSlug",
+        "vote" as "value"
+      FROM "RawVotes"
+      WHERE "agendaItemNumber" NOT IN (
+        SELECT "agendaItemNumber"
+        FROM "ProblemAgendaItems"
+      )
+    `;
+  }
 }
 
 type RawVoteRow = {

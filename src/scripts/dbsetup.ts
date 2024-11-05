@@ -94,7 +94,6 @@ const RawContactColumns = [
   "lastName",
   "email",
   "photoUrl",
-
   "id",
   "website",
   "addressLine1",
@@ -133,6 +132,9 @@ async function main() {
     console.log("Setting up raw votes");
     await db.createRawVoteTable();
     await downloadAndPopulateRawVotes(db);
+
+    console.log("Creating mat views");
+    await db.createMatViews();
   } finally {
     await db.release();
   }
