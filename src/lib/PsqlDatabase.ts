@@ -1,5 +1,6 @@
 import {
   db,
+  sql as sqlRaw,
   type QueryResultRow,
   type QueryResult,
   type QueryResultBase,
@@ -26,6 +27,8 @@ type SingleQueryResult<O extends QueryResultRow> = QueryResultBase & {
 };
 
 type EmptyObject = Record<never, never>;
+
+export const sql = sqlRaw;
 
 export class PsqlDatabase {
   private readonly clientPromise: Promise<VercelPoolClient>;
