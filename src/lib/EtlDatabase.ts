@@ -159,14 +159,16 @@ export class EtlDatabase {
     await this.db.execute`
       CREATE MATERIALIZED VIEW "Contacts" AS
       SELECT
-        DISTINCT ON ("term", "contactSlug")
+        DISTINCT ON ("contactSlug")
         "contactName",
         "contactSlug",
         "photoUrl",
         "email",
         "phone"
-      FROM "RawContacts"
-      ORDER BY "term" desc
+      FROM (
+        SELECT * FROM "RawContacts"
+        ORDER BY "term" DESC
+      )
     `;
     await this.db.execute`
       DROP MATERIALIZED VIEW IF EXISTS "Councillors";
