@@ -260,7 +260,7 @@ export class EtlDatabase {
     await this.db.execute`
       CREATE MATERIALIZED VIEW "Votes" AS
       SELECT DISTINCT
-       "agendaItemNumber",
+        "agendaItemNumber",
         "motionType",
         "voteDescription",
         "dateTime",

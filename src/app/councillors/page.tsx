@@ -9,7 +9,11 @@ const getAllCouncillors = unstable_cache(async () => {
     photoUrl: string | null;
     wardName: string;
   }>`
-    SELECT *
+    SELECT
+      "contactSlug",
+      "contactName",
+      "photoUrl",
+      "wardName"
     FROM "Councillors"
     INNER JOIN "Contacts"
       USING ("contactSlug")
@@ -32,7 +36,7 @@ export default async function Councillors() {
               className="p-2 mb-2 flex gap-2 hover:underline"
             >
               <img
-                src={councillor.photoUrl!}
+                src={councillor.photoUrl ?? ""}
                 className="bg-zinc-300"
                 style={{ height: 52, width: 42 }}
                 alt=""
