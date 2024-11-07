@@ -2,9 +2,9 @@ import { ExternalLink } from "@/components/ui/external-link";
 import { sql } from "@/lib/PsqlDatabase";
 import { unstable_cache } from "next/cache";
 
-type ParamsType = {
+type ParamsType = Promise<{
   contactSlug: string;
-};
+}>;
 
 export async function generateStaticParams() {
   const response =
@@ -83,7 +83,7 @@ const getVotesByAgendaItemsForContact = unstable_cache(
       agendaItemTitle: rows[0]!.agendaItemTitle,
       motions: rows,
     }));
-  }
+  },
 );
 
 export default async function Councillor(props: { params: ParamsType }) {
