@@ -1,7 +1,9 @@
+import { PageHeading } from "@/components/ui/typography";
+
 export default function NotFoundPage() {
   return (
     <main>
-      <h2>404 - Page not found</h2>
+      <PageHeading>404 - Page not found</PageHeading>
     </main>
   );
 }
