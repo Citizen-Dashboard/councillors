@@ -1,4 +1,5 @@
 import { ExternalLink } from "@/components/ui/external-link";
+import { PageHeading } from "@/components/ui/typography";
 import { sql } from "@/lib/PsqlDatabase";
 import { unstable_cache } from "next/cache";
 
@@ -96,8 +97,8 @@ export default async function Councillor(props: { params: ParamsType }) {
       {councillor && (
         <section>
           <div>
-            <h2 className="text-5xl">{councillor.contactName}</h2>
-            <h3 className="text-4xl">{councillor.wardName}</h3>
+            <PageHeading>{councillor.contactName}</PageHeading>
+            <h3 className="text-2xl font-semibold">{councillor.wardName}</h3>
           </div>
         </section>
       )}

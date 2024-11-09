@@ -1,3 +1,4 @@
+import { PageHeading } from "@/components/ui/typography";
 import { sql } from "@/lib/PsqlDatabase";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
@@ -27,7 +28,7 @@ export default async function Councillors() {
   const councillors = await getAllCouncillors();
   return (
     <div className="max-w-screen-sm mx-auto">
-      <h2 className="text-3xl">Councillors of Toronto</h2>
+      <PageHeading>Councillors of Toronto</PageHeading>
       <ul>
         {councillors.map((councillor) => (
           <li key={councillor.contactSlug} className="even:bg-zinc-50">

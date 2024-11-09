@@ -1,14 +1,9 @@
-import Link from "next/link";
-
 export default async function Home() {
   return (
     <main className="max-w-3xl mx-auto mt-4">
       <h1 className="text-5xl">
         Citizen Dashboard: <strong>Councillors</strong>
       </h1>
-      <nav className="underline my-2">
-        <Link href="/councillors">Councillors</Link>
-      </nav>
 
       <p>
         Lorem ipsum dolor sit amet consectetur, adipisicing elit. Et in at
