@@ -23,7 +23,7 @@ export const AppNavigation = () => {
   const isMobile = useIsMobile();
 
   return (
-    <header className="flex items-center py-1 mb-1 px-2 gap-2 sticky top-0 bg-white border-b-2 border-slate-200">
+    <header className="flex items-center py-1 mb-2 px-2 gap-2 sticky top-0 bg-white border-b-2 border-slate-200">
       {isMobile && <NavigationHamburger />}
       <Link href="/">
         <h1 className="text-2xl font-semibold">Citizen Dashboard</h1>
