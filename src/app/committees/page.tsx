@@ -1,22 +1,43 @@
+import { Gutters } from "@/components/ui/gutters";
 import { PageHeading } from "@/components/ui/typography";
+import { sql } from "@/lib/PsqlDatabase";
+import { unstable_cache } from "next/cache";
 
-// Todo: List committees and details
-export default function Committees() {
+const getAllCommittees = unstable_cache(async () => {
+  const response = await sql<{
+    committeeName: string;
+    committeeSlug: string;
+    agendaItemCount: number;
+  }>`
+    SELECT
+      "committeeName",
+      "committeeSlug",
+      COUNT (DISTINCT "agendaItemNumber") as "agendaItemCount"
+    FROM "Committees"
+    INNER JOIN "Motions"
+      using ("committeeSlug")
+    GROUP BY "committeeName", "committeeSlug"
+    ORDER BY 3 desc
+  `;
+  return response.rows;
+});
+
+// Todo: Display actually relevant details and link to each committe page
+export default async function Committees() {
+  const comittees = await getAllCommittees();
   return (
-    <main>
-      <PageHeading>Committees of Toronto</PageHeading>
-      <p>
-        Lorem, ipsum dolor sit amet consectetur adipisicing elit. Ad nostrum
-        minima sint saepe inventore? Voluptatem, veniam optio, impedit quis
-        distinctio quo nesciunt cumque libero praesentium maxime, voluptatum est
-        quibusdam facere? Animi pariatur aliquam rem quisquam repellendus,
-        commodi, culpa provident dolor ipsum cum iste quam! Ullam, nemo modi.
-        Quam, maxime dicta. Saepe, ut. Itaque sunt, inventore veritatis animi
-        placeat dolore quisquam amet non reprehenderit temporibus reiciendis, at
-        libero, eaque impedit odio dicta ducimus unde? Maiores, numquam ex eaque
-        quibusdam soluta accusantium vitae veritatis maxime culpa, voluptates
-        dolore? Itaque, quia rerum. Voluptates?
-      </p>
-    </main>
+    <Gutters>
+      <main>
+        <PageHeading>Committees of Toronto</PageHeading>
+        <ul className="list-disc ml-6 ">
+          {comittees.map((committee) => (
+            <li key={committee.committeeSlug}>
+              {committee.committeeName}
+              <span> ({committee.agendaItemCount})</span>
+            </li>
+          ))}
+        </ul>
+      </main>
+    </Gutters>
   );
 }
