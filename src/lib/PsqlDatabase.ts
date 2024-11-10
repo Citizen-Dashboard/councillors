@@ -10,6 +10,21 @@ import {
 import { types } from "@neondatabase/serverless";
 import { config } from "@/lib/config";
 
+import { neonConfig } from "@neondatabase/serverless";
+
+if (
+  config.VERCEL_ENV === "development" &&
+  config.POSTGRES_HOST === "localhost"
+) {
+  console.log("Using local PSQL connection");
+  if (!config.DEVELOPMENT_NEON_PORT)
+    throw new Error(`Missing env var "DEVELOPMENT_NEON_PORT"`);
+  neonConfig.wsProxy = (host) => `${host}:${config.DEVELOPMENT_NEON_PORT}/v1`;
+  neonConfig.useSecureWebSocket = false;
+  neonConfig.pipelineTLS = false;
+  neonConfig.pipelineConnect = false;
+}
+
 const integerParser = (value: string): number => {
   const int = parseInt(value);
   if (isNaN(int)) throw new Error(`Unable to parse integer "${value}"`);

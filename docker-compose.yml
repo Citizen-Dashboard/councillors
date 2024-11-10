@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DATABASE}
+    # Expose the Postgres port to the host machine,
+    # so you can inspect and administrate it
+    ports:
+      - "56789:5432"
+  pg_proxy:
+    image: ghcr.io/neondatabase/wsproxy:latest
+    env_file:
+      - .env
+    environment:
+      APPEND_PORT: "postgres:5432"
+      ALLOW_ADDR_REGEX: ".*"
+      LOG_TRAFFIC: "true"
+    ports:
+      - "54330:80"
+    depends_on:
+      - postgres

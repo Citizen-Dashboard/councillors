@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "script": "node -r ts-node/register --env-file=.env",
-    "script:dbsetup": "npm run script src/scripts/dbsetup.ts"
+    "script:dbsetup": "npm run script src/scripts/dbsetup.ts",
+    "script:dbtest": "npm run script src/scripts/dbtest.ts"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.2",
