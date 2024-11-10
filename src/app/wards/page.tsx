@@ -1,22 +1,49 @@
+import { Gutters } from "@/components/ui/gutters";
 import { PageHeading } from "@/components/ui/typography";
+import { ExternalLink } from "@/components/ui/external-link";
+import { sql } from "@/lib/PsqlDatabase";
 
-// Todo: List wards and details
-export default function Wards() {
+import { unstable_cache } from "next/cache";
+
+const getAllWards = unstable_cache(async () => {
+  const response = await sql<{
+    wardId: string;
+    wardName: string;
+    wardSlug: string;
+  }>`
+    SELECT
+      "wardId",
+      "wardName",
+      "wardSlug"
+    FROM "Wards"
+    ORDER BY "wardId"::INT
+  `;
+  return response.rows;
+});
+
+// Todo: List actually useful ward details and link to ward pages
+export default async function Wards() {
+  const wards = await getAllWards();
   return (
-    <main>
-      <PageHeading>Wards of Toronto</PageHeading>
-      <p>
-        Lorem, ipsum dolor sit amet consectetur adipisicing elit. Ad nostrum
-        minima sint saepe inventore? Voluptatem, veniam optio, impedit quis
-        distinctio quo nesciunt cumque libero praesentium maxime, voluptatum est
-        quibusdam facere? Animi pariatur aliquam rem quisquam repellendus,
-        commodi, culpa provident dolor ipsum cum iste quam! Ullam, nemo modi.
-        Quam, maxime dicta. Saepe, ut. Itaque sunt, inventore veritatis animi
-        placeat dolore quisquam amet non reprehenderit temporibus reiciendis, at
-        libero, eaque impedit odio dicta ducimus unde? Maiores, numquam ex eaque
-        quibusdam soluta accusantium vitae veritatis maxime culpa, voluptates
-        dolore? Itaque, quia rerum. Voluptates?
-      </p>
-    </main>
+    <Gutters>
+      <main>
+        <PageHeading>Wards of Toronto</PageHeading>
+        <p>
+          Not sure which ward you are in?{" "}
+          <ExternalLink className="underline" href={findOutLink}>
+            Find out here.
+          </ExternalLink>
+        </p>
+        <ul className="ml-6 ">
+          {wards.map((wards) => (
+            <li key={wards.wardSlug}>
+              <span>{wards.wardId}.</span> {wards.wardName}
+            </li>
+          ))}
+        </ul>
+      </main>
+    </Gutters>
   );
 }
+
+const findOutLink = `https://www.toronto.ca/city-government/data-research-maps/neighbourhoods-communities/ward-profiles/`;
