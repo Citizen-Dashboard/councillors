@@ -3,9 +3,9 @@ import { PageHeading } from "@/components/ui/typography";
 import { sql } from "@/lib/PsqlDatabase";
 import { unstable_cache } from "next/cache";
 
-type ParamsType = Promise<{
+type ParamsType = {
   contactSlug: string;
-}>;
+};
 
 export async function generateStaticParams() {
   const response =
@@ -60,15 +60,9 @@ const getVotesByAgendaItemsForContact = unstable_cache(
       "result"
     FROM "Votes"
     INNER JOIN "Motions"
-      USING (
-        "agendaItemNumber",
-        "motionType",
-        "voteDescription",
-        "dateTime",
-        "committeeSlug"
-      )
+      USING ("agendaItemNumber", "motionId")
     INNER JOIN "AgendaItems"
-    USING ("agendaItemNumber")    
+    	USING ("agendaItemNumber")
     WHERE "contactSlug" = ${contactSlug}
     ORDER BY "dateTime" desc
   `;
@@ -87,7 +81,9 @@ const getVotesByAgendaItemsForContact = unstable_cache(
   },
 );
 
-export default async function Councillor(props: { params: ParamsType }) {
+export default async function Councillor(props: {
+  params: Promise<ParamsType>;
+}) {
   const { contactSlug } = await props.params;
   const councillor = await getCouncillor(contactSlug);
   const agendaItems = await getVotesByAgendaItemsForContact(contactSlug);
