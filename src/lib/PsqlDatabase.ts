@@ -7,23 +7,41 @@ import {
   type VercelPoolClient,
 } from "@vercel/postgres";
 
-import { types } from "@neondatabase/serverless";
 import { config } from "@/lib/config";
 
-import { neonConfig } from "@neondatabase/serverless";
+import { neonConfig, types } from "@neondatabase/serverless";
 
-if (
-  config.VERCEL_ENV === "development" &&
-  config.POSTGRES_HOST === "localhost"
-) {
+const isDbLocal =
+  config.VERCEL_ENV === "development" && config.POSTGRES_HOST === "localhost";
+
+if (isDbLocal) {
   console.log("Using local PSQL connection");
   if (!config.DEVELOPMENT_NEON_PORT)
     throw new Error(`Missing env var "DEVELOPMENT_NEON_PORT"`);
-  neonConfig.wsProxy = (host) => `${host}:${config.DEVELOPMENT_NEON_PORT}/v1`;
+  neonConfig.wsProxy = (host) => {
+    console.log("Calculating WS Proxy", host);
+    return `${host}:${config.DEVELOPMENT_NEON_PORT}/v1`;
+  };
   neonConfig.useSecureWebSocket = false;
   neonConfig.pipelineTLS = false;
   neonConfig.pipelineConnect = false;
 }
+
+// Workaround to force use of WS Proxy instead of fetch proxy for one off queries
+const developmentSql = async <O extends QueryResultRow = EmptyObject>(
+  strings: TemplateStringsArray,
+  ...values: DbPrimitive[]
+): Promise<QueryResult<O>> => {
+  const db = new PsqlDatabase();
+  try {
+    const result = await db.execute<O>(strings, ...values);
+    return result;
+  } finally {
+    db.release();
+  }
+};
+
+export const sql = isDbLocal ? developmentSql : sqlRaw;
 
 const integerParser = (value: string): number => {
   const int = parseInt(value);
@@ -42,8 +60,6 @@ type SingleQueryResult<O extends QueryResultRow> = QueryResultBase & {
 };
 
 type EmptyObject = Record<never, never>;
-
-export const sql = sqlRaw;
 
 export class PsqlDatabase {
   private readonly clientPromise: Promise<VercelPoolClient>;
