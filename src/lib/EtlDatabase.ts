@@ -10,7 +10,7 @@ export class EtlDatabase {
 
   public async createRawVoteTable() {
     await this.db.execute`
-      DROP TABLE IF EXISTS "RawVotes";
+      DROP TABLE IF EXISTS "RawVotes" CASCADE;
       CREATE TABLE "RawVotes" (
         "term" TEXT NOT NULL,
         "committeeName" TEXT NOT NULL,
@@ -18,6 +18,7 @@ export class EtlDatabase {
         "dateTime" TEXT NOT NULL,
         "agendaItemNumber" TEXT NOT NULL,
         "agendaItemTitle" TEXT NOT NULL,
+        "motionId" TEXT NOT NULL,
         "motionType" TEXT NOT NULL,
         "vote" TEXT NOT NULL,
         "result" TEXT NOT NULL,
@@ -31,7 +32,7 @@ export class EtlDatabase {
 
   public async createRawContactTable() {
     await this.db.execute`
-      DROP TABLE IF EXISTS "RawContacts";
+      DROP TABLE IF EXISTS "RawContacts" CASCADE;
       CREATE TABLE "RawContacts" (
         "primaryRole" TEXT NOT NULL,
         "email" TEXT NOT NULL,
@@ -72,6 +73,7 @@ export class EtlDatabase {
         "dateTime",
         "agendaItemNumber",
         "agendaItemTitle",
+        "motionId",
         "motionType",
         "vote",
         "result",
@@ -87,6 +89,7 @@ export class EtlDatabase {
         data->>'dateTime',
         data->>'agendaItemNumber',
         data->>'agendaItemTitle',
+        data->>'motionId',
         data->>'motionType',
         data->>'vote',
         data->>'result',
@@ -222,6 +225,7 @@ export class EtlDatabase {
     await this.db.execute`
       DROP MATERIALIZED VIEW IF EXISTS "ProblemAgendaItems" CASCADE;
     `;
+    // Todo: Update with results of unique motion stuff
     await this.db.execute`
       CREATE MATERIALIZED VIEW "ProblemAgendaItems" AS
       SELECT
@@ -243,11 +247,15 @@ export class EtlDatabase {
       CREATE MATERIALIZED VIEW "Motions" AS
       SELECT DISTINCT
         "agendaItemNumber",
+        "motionId",
         "motionType",
         "voteDescription",
         "dateTime",
         "committeeSlug",
-        "result"
+        "result",
+        split_part("result", ', ', 1) as "resultKind",
+        split_part(split_part("result", ', ', 2), '-', 1)::int as "yesVotes",
+        split_part(split_part("result", ', ', 2), '-', 2)::int as "noVotes"
       FROM "RawVotes"
       WHERE "agendaItemNumber" NOT IN (
         SELECT "agendaItemNumber"
@@ -261,10 +269,7 @@ export class EtlDatabase {
       CREATE MATERIALIZED VIEW "Votes" AS
       SELECT DISTINCT
         "agendaItemNumber",
-        "motionType",
-        "voteDescription",
-        "dateTime",
-        "committeeSlug",
+        "motionId",
         "contactSlug",
         "vote" as "value"
       FROM "RawVotes"

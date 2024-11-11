@@ -3,6 +3,7 @@ import openDataCatalog from "./openDataCatalog.json";
 import { createOpenDataCsvParser } from "@/lib/OpenDataCsvHelpers";
 import { toSlug } from "@/lib/TextUtils";
 import { EtlDatabase } from "@/lib/EtlDatabase";
+import createHash from "hash-sum";
 
 function isFullCsvResource(resource: PackageResource) {
   return (
@@ -78,6 +79,13 @@ async function downloadAndPopulateRawVotes(db: EtlDatabase) {
       ...row,
       term: mostRecentResource.term,
       inputRowNumber: id,
+      motionId: createHash({
+        agendaItemNumber: row.agendaItemNumber,
+        motionType: row.motionType,
+        voteDescription: row.voteDescription,
+        result: row.result,
+        dateTime: row.dateTime,
+      }),
       contactName: toContactName(firstName, lastName),
       contactSlug: toSlug(toContactName(firstName, lastName)),
       committeeName: committee,
@@ -115,6 +123,7 @@ const RawVoteColumns = [
   "dateTime",
   "agendaItemNumber",
   "agendaItemTitle",
+  "motionId",
   "motionType",
   "vote",
   "result",

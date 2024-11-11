@@ -37,6 +37,7 @@ export const castNullish = (value: unknown) => {
   return value;
 };
 
+// Todo: Should also detect and repair text-encoding problems in source data
 export const createOpenDataCsvParser = (
   expectedColumns: ReadonlyArray<string>,
 ) =>
