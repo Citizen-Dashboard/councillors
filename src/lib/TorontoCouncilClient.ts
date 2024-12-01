@@ -38,13 +38,31 @@ export class TorontoCouncilClient {
     return cookieValue;
   }
 
-  public async getAgendaItem(
+  public async getAgendaItems(
     meetingFromDate: DayDate,
     meetingToDate: DayDate,
-    pageNumber = 1,
-    pageSize = 200,
-  ) {
+  ): Promise<AgendaItemRecord[]> {
     await this.init();
+    const firstPage = await this.getAgendaItemsPage(
+      meetingFromDate,
+      meetingToDate,
+    );
+    const pagePromises = new Array<Promise<AgendaItemResponse>>();
+    for (let pageNumber = 1; pageNumber < firstPage.TotalPages; pageNumber++) {
+      pagePromises.push(
+        this.getAgendaItemsPage(meetingFromDate, meetingToDate, pageNumber),
+      );
+    }
+    const pages = await Promise.all([firstPage, ...pagePromises]);
+    return pages.flatMap((page) => page.Records);
+  }
+
+  private async getAgendaItemsPage(
+    meetingFromDate: DayDate,
+    meetingToDate: DayDate,
+    pageNumber = 0,
+    pageSize = 200,
+  ): Promise<AgendaItemResponse> {
     const searchParams = new URLSearchParams(
       Object.entries({
         pageNumber: pageNumber.toString(),
@@ -53,19 +71,17 @@ export class TorontoCouncilClient {
       }),
     );
 
-    const response = await fetch(`${this.agendaItemUrl}?${searchParams}`, {
+    const url = `${this.agendaItemUrl}?${searchParams}`;
+    console.log(`Grabbing page of agenda items`, url);
+    const response = await fetch(url, {
       method: "POST",
       body: JSON.stringify({
         includeTitle: "True",
         includeSummary: "True",
         includeRecommendations: "True",
         includeDecisions: "True",
-        meetingFromDate:
-          new Date(2024, 10, 1).toISOString() ||
-          dayDateToIsoString(meetingFromDate),
-        meetingToDate:
-          new Date(2024, 11, 1).toISOString() ||
-          dayDateToIsoString(meetingToDate),
+        meetingFromDate: dayDateToIsoString(meetingFromDate),
+        meetingToDate: dayDateToIsoString(meetingToDate),
       }),
       headers: {
         ...this.staticHeaders,
@@ -76,6 +92,60 @@ export class TorontoCouncilClient {
     });
     if (!response.ok)
       throw new Error(`Failed to get agenda items ${response.status}`);
-    return await response.json();
+    const page: AgendaItemResponse = await response.json();
+    if (!page.Records?.length) {
+      throw new Error(`No records found in page`);
+    }
+    console.log("Grabbed page of agenda items", {
+      ...page,
+      Records: `Array<${page.Records.length}>`,
+    });
+    return page;
   }
 }
+
+type AgendaItemResponse = {
+  TotalRecordCount: number;
+  TotalPages: number;
+  PageSize: number;
+  Records: AgendaItemRecord[];
+  PageNumber: number;
+  result: "OK";
+};
+
+type AgendaItemRecord = {
+  id: string;
+  termId: number;
+  agendaItemId: number;
+  councilAgendaItemId: number;
+  decisionBodyId: number;
+  meetingId: number;
+  itemProcessId: number;
+  decisionBodyName: string;
+  meetingDate: number;
+  reference: string; // '2024.CA20.1',
+  termYear: string;
+  agendaCd: string;
+  meetingNumber: string;
+  itemStatus: string;
+  agendaItemTitle: string;
+  agendaItemSummary: string; // HTML
+  agendaItemRecommendation: string; // HTML
+  subjectTerms: string;
+  wardId: number[];
+  backgroundAttachmentId: number[];
+  agendaItemAddress: Array<{
+    agendaItemId: number;
+    addressId: number;
+    streetNumber: string;
+    streetName: string;
+    streetType: string;
+    city: string;
+    province: string;
+    country: string;
+    postalCode: string;
+    latitude: number;
+    longitude: number;
+    fullAddress: string;
+  }>;
+};
