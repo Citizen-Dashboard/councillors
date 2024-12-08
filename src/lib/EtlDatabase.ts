@@ -1,4 +1,4 @@
-import { Term } from "@/scripts/dbsetup";
+import { Term } from "@/scripts/dbSetup";
 import { PsqlDatabase } from "./PsqlDatabase";
 
 export class EtlDatabase {
