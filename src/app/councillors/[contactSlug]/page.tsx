@@ -116,9 +116,9 @@ export default async function Councillor(props: {
             <VoteIcon />
             Voted ({agendaItems.length})
           </TabsTrigger>
-          <TabsTrigger className="gap-1" value="authored">
+          <TabsTrigger className="gap-1" value="moved">
             <NotebookPenIcon />
-            Authored
+            Moved
           </TabsTrigger>
           <TabsTrigger className="gap-1" value="seconded">
             <BookOpenCheckIcon />
@@ -171,7 +171,7 @@ export default async function Councillor(props: {
           </ol>
         </TabsContent>
 
-        <TabsContent value="authored">Todo</TabsContent>
+        <TabsContent value="moved">Todo</TabsContent>
         <TabsContent value="seconded">Todo</TabsContent>
         <TabsContent value="committees">Todo</TabsContent>
       </Tabs>

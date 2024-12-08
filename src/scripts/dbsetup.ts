@@ -14,11 +14,11 @@ function isFullCsvResource(resource: PackageResource) {
 }
 
 export type Term = `${number}-${number}`;
-export const findTermInText = (text: string): Term => {
+export function findTermInText(text: string): Term {
   const groups = text.match(/\d\d\d\d-\d\d\d\d/);
   if (!groups) throw new Error(`Unable to find term in "${text}"`);
   return groups[0] as Term;
-};
+}
 
 function toContactName(firstName: string, lastName: string) {
   const contactName = `${firstName.trim()} ${lastName.trim()}`;
@@ -29,10 +29,44 @@ function toContactName(firstName: string, lastName: string) {
   return contactName;
 }
 
+function getCouncillorName(approximateName: string) {
+  const cleanName = approximateName
+    .replace(/,/g, "")
+    .replace(/\bcouncillor\b/gi, "")
+    .replace(/\bmayor\b/gi, "")
+    .replace(/\bdeputy\b/gi, "")
+    .replace(/\band\b/gi, "")
+    .trim();
+  if (!cleanName) return null;
+  return toSlug(cleanName);
+}
+
+// Fostering Belonging, Community and Inclusion, and Combating Hate in Toronto - by Councillor James Pasternak, seconded by Mayor Olivia Chow, Deputy Mayor Ausma Malik, Councillor Mike Colle, Councillor Jennifer McKelvie, and Councillor Amber Morley',
+// motionType: 'Adopt Item'
+function extractDataFromTitle(agendaItemTitle: string) {
+  const [firstPart, byLine] = agendaItemTitle.split(/ - by /i);
+  if (!byLine)
+    return {
+      title: agendaItemTitle.trim(),
+      movedBy: null,
+      secondedBy: null,
+    };
+  const [movedByRaw, secondedByRaw] = byLine.split(/, seconded by/i);
+  const movedBy = getCouncillorName(movedByRaw);
+  const secondedBy = secondedByRaw
+    .split(",")
+    .map((chunk) => getCouncillorName(chunk));
+  return {
+    title: firstPart.trim(),
+    movedBy,
+    secondedBy,
+  };
+}
+
 async function downloadAndPopulateRawContacts(db: EtlDatabase) {
   const openDataClient = new OpenDataClient();
   const contactPackage = await openDataClient.showPackage(
-    openDataCatalog.contactInformation,
+    openDataCatalog.contactInformation
   );
   const resources = contactPackage.result.resources.filter(isFullCsvResource);
   for (const resource of resources) {
@@ -59,7 +93,7 @@ async function downloadAndPopulateRawContacts(db: EtlDatabase) {
 async function downloadAndPopulateRawVotes(db: EtlDatabase) {
   const openDataClient = new OpenDataClient();
   const contactPackage = await openDataClient.showPackage(
-    openDataCatalog.votingRecords,
+    openDataCatalog.votingRecords
   );
   const resources = contactPackage.result.resources.filter(isFullCsvResource);
   const [mostRecentResource] = resources
@@ -70,27 +104,32 @@ async function downloadAndPopulateRawVotes(db: EtlDatabase) {
     .sort((a, b) => b.term.localeCompare(a.term));
 
   const requestStream = await openDataClient.fetchDataset(
-    mostRecentResource.url,
+    mostRecentResource.url
   );
   const parser = createOpenDataCsvParser(RawVoteColumns);
   const rowStream = requestStream
     .pipe(parser)
-    .map(({ firstName, lastName, id, committee, ...row }) => ({
-      ...row,
-      term: mostRecentResource.term,
-      inputRowNumber: id,
-      motionId: createHash({
-        agendaItemNumber: row.agendaItemNumber,
-        motionType: row.motionType,
-        voteDescription: row.voteDescription,
-        result: row.result,
-        dateTime: row.dateTime,
-      }),
-      contactName: toContactName(firstName, lastName),
-      contactSlug: toSlug(toContactName(firstName, lastName)),
-      committeeName: committee,
-      committeeSlug: toSlug(committee),
-    }));
+    .map(({ firstName, lastName, id, committee, ...row }) => {
+      const byLine = extractDataFromTitle(row.agendaItemTitle);
+      return {
+        ...row,
+        term: mostRecentResource.term,
+        inputRowNumber: id,
+        motionId: createHash({
+          agendaItemNumber: row.agendaItemNumber,
+          motionType: row.motionType,
+          voteDescription: row.voteDescription,
+          result: row.result,
+          dateTime: row.dateTime,
+        }),
+        contactName: toContactName(firstName, lastName),
+        contactSlug: toSlug(toContactName(firstName, lastName)),
+        committeeName: committee,
+        committeeSlug: toSlug(committee),
+        movedBy: byLine?.movedBy ?? null,
+        secondedBy: byLine?.secondedBy ?? null,
+      };
+    });
   await db.bulkInsertRawVotes(rowStream);
 }
 
