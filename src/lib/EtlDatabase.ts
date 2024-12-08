@@ -25,7 +25,9 @@ export class EtlDatabase {
         "voteDescription" TEXT NOT NULL,
         "inputRowNumber" BIGINT NOT NULL,
         "contactName" TEXT NOT NULL,
-        "contactSlug" TEXT NOT NULL
+        "contactSlug" TEXT NOT NULL,
+        "movedBy" TEXT NULL,
+        "secondedBy" TEXT[] NULL
       );
     `;
   }
@@ -60,6 +62,10 @@ export class EtlDatabase {
   public async bulkInsertRawVotes(rowStream: AsyncIterable<RawVoteRow>) {
     const rows = new Array<RawVoteRow>();
     for await (const row of rowStream) {
+      if (typeof row.movedBy !== "string" && row.movedBy !== null)
+        throw new Error(`Invalid moved by`, { cause: row });
+      if (!Array.isArray(row.secondedBy) && row.secondedBy !== null)
+        throw new Error(`Invalid seconded by`, { cause: row });
       rows.push(row);
     }
     await this.db.execute`
@@ -80,7 +86,9 @@ export class EtlDatabase {
         "voteDescription",
         "inputRowNumber",
         "contactName",
-        "contactSlug"
+        "contactSlug",
+        "movedBy",
+        "secondedBy"
       )
       SELECT
         data->>'term',
@@ -96,7 +104,12 @@ export class EtlDatabase {
         data->>'voteDescription',
         (data->>'inputRowNumber')::BIGINT,
         data->>'contactName',
-        data->>'contactSlug'
+        data->>'contactSlug',
+        data->>'movedBy',
+        CASE
+          WHEN data->>'secondedBy' IS NULL THEN NULL
+          ELSE ARRAY(SELECT jsonb_array_elements_text(data->'secondedBy'))
+        END
       FROM json_data
     `;
   }
@@ -281,7 +294,7 @@ export class EtlDatabase {
   }
 }
 
-type RawVoteRow = {
+export type RawVoteRow = {
   term: string;
   committeeName: string;
   committeeSlug: string;
@@ -295,9 +308,11 @@ type RawVoteRow = {
   inputRowNumber: number;
   contactName: string;
   contactSlug: string;
+  movedBy: string | null;
+  secondedBy: string[] | null;
 };
 
-type RawContactRow = {
+export type RawContactRow = {
   primaryRole: string;
   email: string;
   photoUrl: string | null;

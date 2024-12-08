@@ -2,7 +2,7 @@ import { OpenDataClient, PackageResource } from "@/lib/OpenDataClient";
 import openDataCatalog from "./openDataCatalog.json";
 import { createOpenDataCsvParser } from "@/lib/OpenDataCsvHelpers";
 import { toSlug } from "@/lib/TextUtils";
-import { EtlDatabase } from "@/lib/EtlDatabase";
+import { EtlDatabase, RawVoteRow } from "@/lib/EtlDatabase";
 import createHash from "hash-sum";
 
 function isFullCsvResource(resource: PackageResource) {
@@ -29,7 +29,7 @@ function toContactName(firstName: string, lastName: string) {
   return contactName;
 }
 
-function getCouncillorName(approximateName: string) {
+function getCleanCouncillorSlug(approximateName: string) {
   const cleanName = approximateName
     .replace(/,/g, "")
     .replace(/\bcouncillor\b/gi, "")
@@ -37,36 +37,36 @@ function getCouncillorName(approximateName: string) {
     .replace(/\bdeputy\b/gi, "")
     .replace(/\band\b/gi, "")
     .trim();
-  if (!cleanName) return null;
+  if (!cleanName)
+    throw new Error(
+      `Failed to extract councillor slug from "${approximateName}"`,
+    );
   return toSlug(cleanName);
 }
 
-// Fostering Belonging, Community and Inclusion, and Combating Hate in Toronto - by Councillor James Pasternak, seconded by Mayor Olivia Chow, Deputy Mayor Ausma Malik, Councillor Mike Colle, Councillor Jennifer McKelvie, and Councillor Amber Morley',
-// motionType: 'Adopt Item'
 function extractDataFromTitle(agendaItemTitle: string) {
   const [firstPart, byLine] = agendaItemTitle.split(/ - by /i);
-  if (!byLine)
+  if (!byLine) {
     return {
       title: agendaItemTitle.trim(),
       movedBy: null,
       secondedBy: null,
     };
+  }
   const [movedByRaw, secondedByRaw] = byLine.split(/, seconded by/i);
-  const movedBy = getCouncillorName(movedByRaw);
-  const secondedBy = secondedByRaw
-    .split(",")
-    .map((chunk) => getCouncillorName(chunk));
   return {
     title: firstPart.trim(),
-    movedBy,
-    secondedBy,
+    movedBy: getCleanCouncillorSlug(movedByRaw),
+    secondedBy: secondedByRaw
+      .split(",")
+      .map((chunk) => getCleanCouncillorSlug(chunk)),
   };
 }
 
 async function downloadAndPopulateRawContacts(db: EtlDatabase) {
   const openDataClient = new OpenDataClient();
   const contactPackage = await openDataClient.showPackage(
-    openDataCatalog.contactInformation
+    openDataCatalog.contactInformation,
   );
   const resources = contactPackage.result.resources.filter(isFullCsvResource);
   for (const resource of resources) {
@@ -93,7 +93,7 @@ async function downloadAndPopulateRawContacts(db: EtlDatabase) {
 async function downloadAndPopulateRawVotes(db: EtlDatabase) {
   const openDataClient = new OpenDataClient();
   const contactPackage = await openDataClient.showPackage(
-    openDataCatalog.votingRecords
+    openDataCatalog.votingRecords,
   );
   const resources = contactPackage.result.resources.filter(isFullCsvResource);
   const [mostRecentResource] = resources
@@ -104,15 +104,16 @@ async function downloadAndPopulateRawVotes(db: EtlDatabase) {
     .sort((a, b) => b.term.localeCompare(a.term));
 
   const requestStream = await openDataClient.fetchDataset(
-    mostRecentResource.url
+    mostRecentResource.url,
   );
   const parser = createOpenDataCsvParser(RawVoteColumns);
   const rowStream = requestStream
     .pipe(parser)
     .map(({ firstName, lastName, id, committee, ...row }) => {
-      const byLine = extractDataFromTitle(row.agendaItemTitle);
+      const titleData = extractDataFromTitle(row.agendaItemTitle);
       return {
         ...row,
+        agendaItemTitle: titleData.title,
         term: mostRecentResource.term,
         inputRowNumber: id,
         motionId: createHash({
@@ -126,8 +127,8 @@ async function downloadAndPopulateRawVotes(db: EtlDatabase) {
         contactSlug: toSlug(toContactName(firstName, lastName)),
         committeeName: committee,
         committeeSlug: toSlug(committee),
-        movedBy: byLine?.movedBy ?? null,
-        secondedBy: byLine?.secondedBy ?? null,
+        movedBy: titleData?.movedBy ?? null,
+        secondedBy: titleData?.secondedBy ?? null,
       };
     });
   await db.bulkInsertRawVotes(rowStream);
