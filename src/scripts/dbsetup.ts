@@ -2,7 +2,7 @@ import { OpenDataClient, PackageResource } from "@/lib/OpenDataClient";
 import openDataCatalog from "./openDataCatalog.json";
 import { createOpenDataCsvParser } from "@/lib/OpenDataCsvHelpers";
 import { toSlug } from "@/lib/TextUtils";
-import { EtlDatabase, RawVoteRow } from "@/lib/EtlDatabase";
+import { EtlDatabase } from "@/lib/EtlDatabase";
 import createHash from "hash-sum";
 
 function isFullCsvResource(resource: PackageResource) {
@@ -33,6 +33,7 @@ function getCleanCouncillorSlug(approximateName: string) {
   const cleanName = approximateName
     .replace(/,/g, "")
     .replace(/\bcouncillor\b/gi, "")
+    .replace(/\bcouncilor\b/gi, "")
     .replace(/\bmayor\b/gi, "")
     .replace(/\bdeputy\b/gi, "")
     .replace(/\band\b/gi, "")
