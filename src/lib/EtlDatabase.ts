@@ -232,7 +232,9 @@ export class EtlDatabase {
       CREATE MATERIALIZED VIEW "AgendaItems" AS
       SELECT DISTINCT
         "agendaItemNumber",
-        "agendaItemTitle"
+        "agendaItemTitle",
+        "movedBy",
+        "secondedBy"
       FROM "RawVotes"
     `;
     await this.db.execute`
@@ -292,12 +294,18 @@ export class EtlDatabase {
       )
     `;
     await this.db.execute`
+      DROP MATERIALIZED VIEW IF EXISTS "Movers" CASCADE;
+    `;
+    await this.db.execute`
       CREATE MATERIALIZED VIEW "Movers" AS
       SELECT DISTINCT ON ("agendaItemNumber")
         "agendaItemNumber",
         "movedBy"
       FROM "RawVotes"
       WHERE "movedBy" IS NOT NULL
+    `;
+    await this.db.execute`
+      DROP MATERIALIZED VIEW IF EXISTS "Seconders" CASCADE;
     `;
     await this.db.execute`
       CREATE MATERIALIZED VIEW "Seconders" AS
