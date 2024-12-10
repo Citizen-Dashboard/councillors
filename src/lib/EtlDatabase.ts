@@ -25,7 +25,9 @@ export class EtlDatabase {
         "voteDescription" TEXT NOT NULL,
         "inputRowNumber" BIGINT NOT NULL,
         "contactName" TEXT NOT NULL,
-        "contactSlug" TEXT NOT NULL
+        "contactSlug" TEXT NOT NULL,
+        "movedBy" TEXT NULL,
+        "secondedBy" TEXT[] NULL
       );
     `;
   }
@@ -108,7 +110,9 @@ export class EtlDatabase {
         "voteDescription",
         "inputRowNumber",
         "contactName",
-        "contactSlug"
+        "contactSlug",
+        "movedBy",
+        "secondedBy"
       )
       SELECT
         data->>'term',
@@ -124,7 +128,12 @@ export class EtlDatabase {
         data->>'voteDescription',
         (data->>'inputRowNumber')::BIGINT,
         data->>'contactName',
-        data->>'contactSlug'
+        data->>'contactSlug',
+        data->>'movedBy',
+        CASE
+          WHEN data->>'secondedBy' IS NULL THEN NULL
+          ELSE ARRAY(SELECT jsonb_array_elements_text(data->'secondedBy'))
+        END
       FROM json_data
     `;
   }
@@ -247,7 +256,9 @@ export class EtlDatabase {
       CREATE MATERIALIZED VIEW "AgendaItems" AS
       SELECT DISTINCT
         "agendaItemNumber",
-        "agendaItemTitle"
+        "agendaItemTitle",
+        "movedBy",
+        "secondedBy"
       FROM "RawVotes"
     `;
     await this.db.execute`
@@ -306,10 +317,34 @@ export class EtlDatabase {
         FROM "ProblemAgendaItems"
       )
     `;
+    await this.db.execute`
+      DROP MATERIALIZED VIEW IF EXISTS "Movers" CASCADE;
+    `;
+    await this.db.execute`
+      CREATE MATERIALIZED VIEW "Movers" AS
+      SELECT DISTINCT ON ("agendaItemNumber")
+        "agendaItemNumber",
+        "movedBy"
+      FROM "RawVotes"
+      WHERE "movedBy" IS NOT NULL
+    `;
+    await this.db.execute`
+      DROP MATERIALIZED VIEW IF EXISTS "Seconders" CASCADE;
+    `;
+    await this.db.execute`
+      CREATE MATERIALIZED VIEW "Seconders" AS
+      SELECT "agendaItemNumber", unnest("secondedBy") FROM (
+        SELECT DISTINCT ON ("agendaItemNumber")
+        "agendaItemNumber",
+        "secondedBy"
+        FROM "RawVotes"
+        WHERE "secondedBy" IS NOT NULL
+      );
+    `;
   }
 }
 
-type RawVoteRow = {
+export type RawVoteRow = {
   term: string;
   committeeName: string;
   committeeSlug: string;
@@ -323,9 +358,11 @@ type RawVoteRow = {
   inputRowNumber: number;
   contactName: string;
   contactSlug: string;
+  movedBy: string | null;
+  secondedBy: string[] | null;
 };
 
-type RawContactRow = {
+export type RawContactRow = {
   primaryRole: string;
   email: string;
   photoUrl: string | null;

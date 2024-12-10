@@ -14,11 +14,11 @@ function isFullCsvResource(resource: PackageResource) {
 }
 
 export type Term = `${number}-${number}`;
-export const findTermInText = (text: string): Term => {
+export function findTermInText(text: string): Term {
   const groups = text.match(/\d\d\d\d-\d\d\d\d/);
   if (!groups) throw new Error(`Unable to find term in "${text}"`);
   return groups[0] as Term;
-};
+}
 
 function toContactName(firstName: string, lastName: string) {
   const contactName = `${firstName.trim()} ${lastName.trim()}`;
@@ -27,6 +27,43 @@ function toContactName(firstName: string, lastName: string) {
   if (!lastName.trim())
     throw new Error(`Contact has no last name "${contactName}"`);
   return contactName;
+}
+
+function getCleanCouncillorSlug(approximateName: string) {
+  const cleanName = approximateName
+    .replace(/,/g, "")
+    .replace(/\bcouncillor\b/gi, "")
+    .replace(/\bcouncilor\b/gi, "")
+    .replace(/\bmayor\b/gi, "")
+    .replace(/\bdeputy\b/gi, "")
+    .replace(/\band\b/gi, "")
+    .trim();
+  if (!cleanName)
+    throw new Error(
+      `Failed to extract councillor slug from "${approximateName}"`,
+    );
+  return toSlug(cleanName);
+}
+
+// Todo: Additional cases
+// 2024.MM23.10
+function extractDataFromTitle(agendaItemTitle: string) {
+  const [firstPart, byLine] = agendaItemTitle.split(/ - by /i);
+  if (!byLine) {
+    return {
+      title: agendaItemTitle.trim(),
+      movedBy: null,
+      secondedBy: null,
+    };
+  }
+  const [movedByRaw, secondedByRaw] = byLine.split(/, seconded by/i);
+  return {
+    title: firstPart.trim(),
+    movedBy: getCleanCouncillorSlug(movedByRaw),
+    secondedBy: secondedByRaw
+      .split(",")
+      .map((chunk) => getCleanCouncillorSlug(chunk)),
+  };
 }
 
 async function downloadAndPopulateRawContacts(db: EtlDatabase) {
@@ -75,22 +112,28 @@ async function downloadAndPopulateRawVotes(db: EtlDatabase) {
   const parser = createOpenDataCsvParser(RawVoteColumns);
   const rowStream = requestStream
     .pipe(parser)
-    .map(({ firstName, lastName, id, committee, ...row }) => ({
-      ...row,
-      term: mostRecentResource.term,
-      inputRowNumber: id,
-      motionId: createHash({
-        agendaItemNumber: row.agendaItemNumber,
-        motionType: row.motionType,
-        voteDescription: row.voteDescription,
-        result: row.result,
-        dateTime: row.dateTime,
-      }),
-      contactName: toContactName(firstName, lastName),
-      contactSlug: toSlug(toContactName(firstName, lastName)),
-      committeeName: committee,
-      committeeSlug: toSlug(committee),
-    }));
+    .map(({ firstName, lastName, id, committee, ...row }) => {
+      const titleData = extractDataFromTitle(row.agendaItemTitle);
+      return {
+        ...row,
+        agendaItemTitle: titleData.title,
+        term: mostRecentResource.term,
+        inputRowNumber: id,
+        motionId: createHash({
+          agendaItemNumber: row.agendaItemNumber,
+          motionType: row.motionType,
+          voteDescription: row.voteDescription,
+          result: row.result,
+          dateTime: row.dateTime,
+        }),
+        contactName: toContactName(firstName, lastName),
+        contactSlug: toSlug(toContactName(firstName, lastName)),
+        committeeName: committee,
+        committeeSlug: toSlug(committee),
+        movedBy: titleData?.movedBy ?? null,
+        secondedBy: titleData?.secondedBy ?? null,
+      };
+    });
   await db.bulkInsertRawVotes(rowStream);
 }
 
