@@ -23,9 +23,9 @@ Then locally run:
   - Installs the project depdencies
 - `docker-compose up`
   - Boots the local PSQL server and proxy
-- `npm run script:test`
+- `npm run script:dbTest`
   - Checks that we are able to make a connection to the local PSQL server
-- `npm run script:dbsetup`
+- `npm run script:dbSetup`
   - Creates tables and views and populates them with data from the Toronto open data API
 - `npm run dev`
   - Boots the next development server locally

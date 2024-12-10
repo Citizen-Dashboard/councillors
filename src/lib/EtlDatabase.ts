@@ -1,4 +1,4 @@
-import { Term } from "@/scripts/dbsetup";
+import { Term } from "@/scripts/dbSetup";
 import { PsqlDatabase } from "./PsqlDatabase";
 
 export class EtlDatabase {
@@ -56,6 +56,34 @@ export class EtlDatabase {
         "contactName" TEXT NOT NULL,
         "contactSlug" TEXT NOT NULL
       );
+    `;
+  }
+
+  public async createRawAgendaItemsTable() {
+    await this.db.execute`
+      DROP TABLE IF EXISTS "RawAgendaItems" CASCADE;
+      CREATE TABLE "RawAgendaItems" (
+        "id" TEXT NOT NULL,
+        data JSONB NOT NULL
+      );
+    `;
+  }
+
+  public async bulkInsertRawAgendaItems(
+    rows: Array<{ id: string; [key: string]: unknown }>,
+  ) {
+    await this.db.execute`
+      WITH json_data AS (
+        SELECT jsonb_array_elements(${JSON.stringify(rows)}::JSONB) AS data
+      )
+      INSERT INTO "RawAgendaItems" (
+        "id",
+        "data"
+      )
+      SELECT
+        data->>'id' as "id",
+        data::JSONB as "data"
+      FROM json_data
     `;
   }
 
