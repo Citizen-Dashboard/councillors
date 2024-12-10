@@ -154,7 +154,10 @@ export default async function Councillor(props: {
         <TabsContent value="seconded">
           <AgendaItemList agendaItems={secondedAgendaItems} />
         </TabsContent>
-        <TabsContent value="committees">Todo</TabsContent>
+        <TabsContent value="committees">
+          {/* Todo */}
+          <p>This feature is coming soon...</p>
+        </TabsContent>
       </Tabs>
     </main>
   );
