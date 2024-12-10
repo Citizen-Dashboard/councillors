@@ -291,6 +291,24 @@ export class EtlDatabase {
         FROM "ProblemAgendaItems"
       )
     `;
+    await this.db.execute`
+      CREATE MATERIALIZED VIEW "Movers" AS
+      SELECT DISTINCT ON ("agendaItemNumber")
+        "agendaItemNumber",
+        "movedBy"
+      FROM "RawVotes"
+      WHERE "movedBy" IS NOT NULL
+    `;
+    await this.db.execute`
+      CREATE MATERIALIZED VIEW "Seconders" AS
+      SELECT "agendaItemNumber", unnest("secondedBy") FROM (
+        SELECT DISTINCT ON ("agendaItemNumber")
+        "agendaItemNumber",
+        "secondedBy"
+        FROM "RawVotes"
+        WHERE "secondedBy" IS NOT NULL
+      );
+    `;
   }
 }
 
