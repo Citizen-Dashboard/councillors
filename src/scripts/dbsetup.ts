@@ -2,7 +2,7 @@ import { OpenDataClient, PackageResource } from "@/lib/OpenDataClient";
 import openDataCatalog from "./openDataCatalog.json";
 import { createOpenDataCsvParser } from "@/lib/OpenDataCsvHelpers";
 import { toSlug } from "@/lib/TextUtils";
-import { EtlDatabase } from "@/lib/EtlDatabase";
+import { EtlDatabase, Term } from "@/lib/EtlDatabase";
 import createHash from "hash-sum";
 
 function isFullCsvResource(resource: PackageResource) {
@@ -13,7 +13,6 @@ function isFullCsvResource(resource: PackageResource) {
   );
 }
 
-export type Term = `${number}-${number}`;
 export function findTermInText(text: string): Term {
   const groups = text.match(/\d\d\d\d-\d\d\d\d/);
   if (!groups) throw new Error(`Unable to find term in "${text}"`);

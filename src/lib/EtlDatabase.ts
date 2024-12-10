@@ -1,4 +1,3 @@
-import { Term } from "@/scripts/dbSetup";
 import { PsqlDatabase } from "./PsqlDatabase";
 
 export class EtlDatabase {
@@ -343,6 +342,8 @@ export class EtlDatabase {
     `;
   }
 }
+
+export type Term = `${number}-${number}`;
 
 export type RawVoteRow = {
   term: string;
