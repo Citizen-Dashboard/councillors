@@ -90,10 +90,6 @@ export class EtlDatabase {
   public async bulkInsertRawVotes(rowStream: AsyncIterable<RawVoteRow>) {
     const rows = new Array<RawVoteRow>();
     for await (const row of rowStream) {
-      if (typeof row.movedBy !== "string" && row.movedBy !== null)
-        throw new Error(`Invalid moved by`, { cause: row });
-      if (!Array.isArray(row.secondedBy) && row.secondedBy !== null)
-        throw new Error(`Invalid seconded by`, { cause: row });
       rows.push(row);
     }
     await this.db.execute`
