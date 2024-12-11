@@ -1,4 +1,4 @@
-# Citizen Dashboard: Councillors
+# Civic Dashboard: Councillors
 
 ## Setup
 
