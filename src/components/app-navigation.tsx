@@ -24,7 +24,7 @@ export const AppNavigation = () => {
         <NavigationHamburger />
       </div>
       <Link href="/">
-        <h1 className="text-2xl font-semibold">Citizen Dashboard</h1>
+        <h1 className="text-2xl font-semibold">Civic Dashboard</h1>
       </Link>
       <div className="hidden md:block">
         <NavigationContent orientation="horizontal" />

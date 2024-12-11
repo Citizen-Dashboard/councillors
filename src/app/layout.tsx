@@ -15,7 +15,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Citizen Dashboard - Councillors",
+  title: "Civic Dashboard - Councillors",
   description: "",
 };
 
