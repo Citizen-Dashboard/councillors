@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "setup:local": "sh src/scripts/appSetup.sh",
     "script": "node -r ts-node/register --env-file=.env",
     "script:dbSetup": "npm run script src/scripts/dbSetup.ts",
     "script:dbTest": "npm run script src/scripts/dbTest.ts",
