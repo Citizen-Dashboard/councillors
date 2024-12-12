@@ -2,31 +2,18 @@
 
 ## Setup
 
-To get started running locally, create a `.env` file with the following:
+First setup the application and datebase with:
 
-```
-POSTGRES_URL="postgresql://default:MyLocalPsqlPassword@localhost:56789/cdlocal?sslmode=require"
-POSTGRES_PRISMA_URL="postgresql://default:MyLocalPsqlPassword@localhost:56789/cdlocal?sslmode=require&pgbouncer=true&connect_timeout=15"
-POSTGRES_URL_NO_SSL="postgresql://default:MyLocalPsqlPassword@localhost:56789/cdlocal"
-POSTGRES_URL_NON_POOLING="postgresql://default:MyLocalPsqlPassword@localhost:56789/cdlocal?sslmode=require"
-POSTGRES_USER="default"
-POSTGRES_HOST="localhost"
-POSTGRES_PASSWORD="MyLocalPsqlPassword"
-POSTGRES_DATABASE="cdlocal"
-DEVELOPMENT_NEON_PORT="54330"
-VERCEL_ENV="development"
-```
+- `npm run setup:local`
 
-Then locally run:
-
-- `npm install --legacy-peer-deps`
   - Installs the project depdencies
-- `docker-compose up`
   - Boots the local PSQL server and proxy
-- `npm run script:dbTest`
-  - Checks that we are able to make a connection to the local PSQL server
-- `npm run script:dbSetup`
   - Creates tables and views and populates them with data from the Toronto open data API
+
+- `npm run script:dbTest`
+
+  - Checks that we are able to make a connection to the local PSQL server
+
 - `npm run dev`
   - Boots the next development server locally
 
